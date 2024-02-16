@@ -1,4 +1,3 @@
 pr: 122635
 releasenote:
-  text: Promote feature-gate `LegacyServiceAccountTokenCleanUp` to GA and lock to
-    default
+  text: Promoted feature-gate `LegacyServiceAccountTokenCleanUp` to GA and locked it to default
