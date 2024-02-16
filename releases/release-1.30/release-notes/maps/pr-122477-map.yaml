@@ -1,0 +1,4 @@
+pr: 122477
+releasenote:
+  text: kubeadm shows the supported shell types of `kubeadm completion` in the error
+    message when an invalid shell was specified

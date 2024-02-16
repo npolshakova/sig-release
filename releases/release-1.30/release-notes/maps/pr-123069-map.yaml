@@ -1,0 +1,3 @@
+pr: 123069
+releasenote:
+  text: Build etcd image `v3.5.12`

@@ -1,0 +1,3 @@
+pr: 122233
+releasenote:
+  text: 'etcd: build image for `v3.5.11`'

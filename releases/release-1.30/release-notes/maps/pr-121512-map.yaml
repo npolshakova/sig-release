@@ -1,0 +1,4 @@
+pr: 121512
+releasenote:
+  text: Add `apiserver.latency.k8s.io/decode-response-object` annotation to the audit
+    log to record the decoding time.

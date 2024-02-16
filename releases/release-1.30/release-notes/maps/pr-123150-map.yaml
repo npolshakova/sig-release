@@ -1,0 +1,3 @@
+pr: 123150
+releasenote:
+  text: Update `etcd` to version `3.5.12`

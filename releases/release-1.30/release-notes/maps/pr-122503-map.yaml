@@ -1,0 +1,4 @@
+pr: 122503
+releasenote:
+  text: The option `ignorable` of scheduler extender can skip error both filter and
+    bind.
