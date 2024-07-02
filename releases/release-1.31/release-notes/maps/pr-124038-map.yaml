@@ -3,4 +3,3 @@ releasenote:
   text: |-
     'kubeadm: Stopped storing the ResolverConfig in the global KubeletConfiguration
     and sets it dynamically for each node instead.'
-pr_body: ""
