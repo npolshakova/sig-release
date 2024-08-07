@@ -1,4 +1,5 @@
 pr: 122704
 releasenote:
-  text: If a pvc has an empty storageClassName, persistentvolume controller won't
-    try to assign a default StorageClass .
+  text: |
+    The PersistentVolume controller no longer automatically assigns a default `StorageClass` to Persistent Volume Claims (PVCs) with an empty `storageClassName`.
+pr_body: ""

@@ -124,8 +124,11 @@ It is important that this process be followed and documentation remain up-to-dat
       - @release-team-comms
       - @release-team-docs
       - @release-team-enhancements
+      - @prod-readiness-reviewers
+    - Add the @k8s-infra-ci-robot account to the board with **Write** access.
   - Create all the Fields (columns) for the board
     > Note: This is currently a manual process and  <https://github.com/orgs/community/discussions/41133> filed to help automate the process.
+    > Note: Since `v1.30` an exceptions process for the Release Doc team is enforced. The previous PR Ready for Review deadline has been replaced with a Docs Freeze phase. Make sure to add `At Risk for Docs Freeze` and `Tracked for Docs Freeze` to the options in `status` column. Moreover add `docs` to the options in `type` column.
     - Until this can be automated; manually create fields with the same `Field Name`, `Field type`, and `Option` values from the previous release's project board.
   - Create all the Views for the board
     > Note: This is also currently a manual process until GitHub GraphQL APIs allow for manipulating Views
@@ -135,8 +138,9 @@ It is important that this process be followed and documentation remain up-to-dat
   - Disable all Workflows for the project
     - Click `...` -> `Workflows`
     - For each workflow that enabled (has a green circle next to it), click the workflow and slide the toggle to 'Off'
-  - Update automation to add issues to the correct Enhancement Tracking Board
-    - Open a PR into kubernetes/test-infra which to update the [`GITHUB_PROJECT_BETA_NUMBER`](https://github.com/kubernetes/test-infra/blob/3de59f96b327c87c6d23a7308abc785268931707/config/jobs/kubernetes/sig-k8s-infra/trusted/sig-release-release-team-jobs/release-team-periodics.yaml#L20-L21) variable used by automation to identity the enhancements tracking board for the current release.
+  - Update automation to add issues to the correct Enhancement Tracking Board. Open a PR into [kubernetes/test-infra](https://github.com/kubernetes/test-infra) with the following changes: 
+    - Update the [`GITHUB_PROJECT_BETA_NUMBER`](https://github.com/kubernetes/test-infra/blob/3de59f96b327c87c6d23a7308abc785268931707/config/jobs/kubernetes/sig-k8s-infra/trusted/sig-release-release-team-jobs/release-team-periodics.yaml#L20-L21) variable used by automation to identity the enhancements tracking board for the current release.
+    - Enable the test-infra job that syncs enhancements to the GitHub project board based on the `lead-opt-in` label. Update the name of the [periodic-sync-enhancements-github-project](https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes/sig-k8s-infra/trusted/sig-release-release-team-jobs/release-team-periodics.yaml#L2) cronjob with the version number of the release and enable the cronjob by commenting the impossible cron and uncommenting the `interval`. You can see how this was done for the v1.29 release cycle in [this commit](https://github.com/kubernetes/test-infra/pull/30528/files#diff-9d86ca0a46a2f74a2cf59fff3d18cbba57b5b3489ecc00c36b03f6b6a0c2ac3a).
 - Create a shortlink for the Tracking Board
   - Create a free account on [bitly](https://bitly.com/) to create a shortlink for the new Enhancement Tracking Board following the pattern `k8sxyy-enhancements`, e.g. <https://bit.ly/k8s127-enhancements>.
 - Make a [pull request](https://github.com/kubernetes/sig-release/pull/1411) to add the shortlinked Enhancement Tracking Board to the current release page in [sig-release][sig-release].
@@ -245,6 +249,8 @@ See the sig-architecture Enhancements [KEP Template](https://github.com/kubernet
   - Make sure that number of in-tree open issues with current milestone matches number of opted-in enhancements by checking the Enhancements Tracking Board and GitHub issues with the current milestone. **Note**: in-tree refers to KEPs with PRs inside the [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) repository.
 - If a previously removed Enhancement has had their exception Approved, set their **Enhancement Status** to `tracked for enhancement freeze` in the Enhancement Tracking Board.
 - On Freeze day, email [Kubernetes-Dev](https://groups.google.com/a/kubernetes.io/g/dev) that freeze has happened and upcoming key dates. Examples [1](https://groups.google.com/g/kubernetes-dev/c/JDM7bNKvhqQ/m/8S7BXtXPBQAJ).
+- Disable the [periodic-sync-enhancements-github-project](https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes/sig-k8s-infra/trusted/sig-release-release-team-jobs/release-team-periodics.yaml#L2) cronjob which syncs enhancements where the `lead-opt-in` label has been added to the GitHub project board.
+  - Disable the job by commenting the `interval` and uncommenting the impossible cron date. You can see how this was done in the v1.29 release in [this commit](https://github.com/kubernetes/test-infra/commit/064dd07f0164c2aadc12d611f5a851d6cc40afdd).
 - Remove any Enhancements that failed to meet the criteria by the Enhancement freeze deadline.
   - Set their **Enhancement Status** in the board to `Removed from Milestone`.
   - Remove the milestone.
@@ -327,7 +333,9 @@ Here's where this enhancement currently stands:
 For this KEP, we would just need to update the following:
 - {insert list of action items}
 
-The status of this enhancement is marked as `at risk for enhancement freeze`. Please keep the issue description up-to-date with appropriate stages as well. Thank you!
+The status of this enhancement is marked as `at risk for enhancement freeze`. Please keep the issue description up-to-date with appropriate stages as well.
+
+If you anticipate missing enhancements freeze, you can file an [exception request](https://github.com/kubernetes/sig-release/blob/master/releases/EXCEPTIONS.md) in advance. Thank you!
 
 ```
 
@@ -370,7 +378,7 @@ Hello 👋, {current release} Enhancements team here.
 
 Unfortunately, this enhancement did not meet requirements for [enhancements freeze](https://github.com/kubernetes/sig-release/blob/master/releases/release_phases.md#enhancements-freeze).
 
-If you still wish to progress this enhancement in {current release}, please file an [exception](https://github.com/kubernetes/sig-release/blob/master/releases/EXCEPTIONS.md) request. Thanks!
+If you still wish to progress this enhancement in {current release}, please file an [exception](https://github.com/kubernetes/sig-release/blob/master/releases/EXCEPTIONS.md) request as soon as possible, within three days. If you have any questions, you can reach out in the #release-enhancements channel on Slack and we'll be happy to help. Thanks!
 ```
 
 #### Code Freeze Templates
@@ -387,6 +395,8 @@ Here's where this enhancement currently stands:
 
 For this enhancement, it looks like the following PRs are open and need to be merged before code freeze (and we need to update the Issue description to include all the related PRs of this KEP):
 - { list of PRs associated with this enhancement }
+
+If you anticipate missing code freeze, you can file an [exception request](https://github.com/kubernetes/sig-release/blob/master/releases/EXCEPTIONS.md) in advance.
 
 Also, please let me know if there are other PRs in k/k we should be tracking for this KEP.
 As always, we are here to help if any questions come up. Thanks!
@@ -412,7 +422,7 @@ Hello {enhancement owner} 👋 Enhancements team here,
 
 Unfortunately, the implementation (code related) PR(s) associated with this enhancement is not in the merge-ready state by code-freeze and hence this enhancement is now removed from the {current release} milestone.
 
-If you still wish to progress this enhancement in {current release}, please file an [exception](https://github.com/kubernetes/sig-release/blob/master/releases/EXCEPTIONS.md) request. Thanks!
+If you still wish to progress this enhancement in {current release}, please file an [exception](https://github.com/kubernetes/sig-release/blob/master/releases/EXCEPTIONS.md) request as soon as possible, within three days. If you have any questions, you can reach out in the #release-enhancements channel on Slack and we'll be happy to help. Thanks!
 
 /milestone clear
 ```
@@ -422,11 +432,11 @@ If you still wish to progress this enhancement in {current release}, please file
 For SIGs which have opted to include Enhancements in the current release:
 
 ```markdown
-Hello sig-{ SIG_NAME }. Enhancements team here.
+Hello SIG { SIG_NAME }! Enhancements team here.
 Just checking in as we approach enhancements freeze at { FREEZE_DATETIME }.
 Your SIG has submitted { X } enhancements for the { CURRENT_RELEASE } cycle, and { Y } enhancements are currently `at risk for enhancement freeze`.
 Refer to the [announcement here]({link to announcement for current release cycle}) for the list of review requirements.
-If your SIG still plans to submit any more enhancement, follow the [instructions here]({link to announcement for current release cycle}) so the enhancements team can begin tracking.
+If your SIG still plans to submit more enhancements, follow the [instructions here]({link to announcement for current release cycle}) so the enhancements team can begin tracking.
 Please plan to make KEP updates to meet all the requirements before enhancement freeze.
 Please reach out to [#release-enhancements](https://kubernetes.slack.com/archives/C02BY55KV7E) if you have any questions.
 ```
@@ -434,7 +444,7 @@ Please reach out to [#release-enhancements](https://kubernetes.slack.com/archive
 For SIGs which have not opted to include Enhancements in the current release:
 
 ```markdown
-Hello sig-{{ SIG_NAME }}. Enhancements team here.
+Hello SIG {{ SIG_NAME }}. Enhancements team here.
 Just checking in as we approach enhancements freeze at {{ FREEZE_DATETIME }}.
 Your SIG has not submitted any enhancements for the { CURRENT_RELEASE } cycle.
 If your SIG still plans to submit an enhancement, follow the [instructions here]({link to announcement for current release cycle}) so the enhancements team can begin tracking.
@@ -476,7 +486,7 @@ This view is used source of truth for tracking the status of enhancements includ
 | Major Change | Enhancement is staying at the current Stage, but major changes in functionality are being implemented.        |
 |   Graduating | Enhancement is graduating to `Beta` or `Stable`.                                                              |
 |  Deprecation | Enhancement is tracking a deprecations or removals.                                                           |
-
+|         Docs | This is a PR for Docs that is being tracked by Docs team.                                                     |
 Notes :
 
 - If the feature is graduating to `Alpha`, the type can either be Net New/Major Change. But usually when features are introduced to Kubernetes, they are not Major Changes.
@@ -493,6 +503,8 @@ Refer to the [Enhancement Freeze Communications](#enhancement-freeze-templates) 
 |                At Risk For Enhancement Freeze | Enhancement does not currently meet requirements for inclusion into current release.                                                        |
 |                Tracked For Code Freeze | Enhancement has met all code freeze requirements for inclusion into current release.                                                                    |
 |                At Risk For Code Freeze | Enhancement does not currently meet requirements for inclusion into current release because code freeze requirements have not been met. |
+|                Tracked For Docs Freeze | Enhancement has met all docs freeze requirements for inclusion into current release.                                                                    |
+|                At Risk For Docs Freeze | Enhancement does not currently meet requirements for inclusion into current release because docs freeze requirements have not been met. |
 |     Exception Required | Enhancement did not meet requirements by enhancement / code freeze and deadlines for requesting an [exception](#exceptions) has not passed. | 
 |               Deferred | Enhancement has been bumped to a future release by owning SIG.                                                                              |
 | Removed From Milestone | Enhancement did not meet requirements by enhancement / code freeze for current release and an exception was not requested and/or approved.  |

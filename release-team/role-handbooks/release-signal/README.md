@@ -10,6 +10,7 @@
     * [Additional Requirements for Leads](#additional-requirements-for-leads)
   * [Timeline](#timeline)
     * [Onboarding](#onboarding)
+      * [Create Assignment Excel Sheet](#create-assignment-excel-sheet)
     * [Early Release](#early-release)
     * [Mid-Release Cycle](#mid-release-cycle)
     * [Code Freeze](#code-freeze)
@@ -30,6 +31,7 @@
     * [A Tour of CI on the Kubernetes Project](#a-tour-of-ci-on-the-kubernetes-project)
     * [How to Escalate](#how-to-escalate)
     * [Checking test dashboards](#checking-test-dashboards)
+      * [Inferring Responsible SIG from the failure](#inferring-responsible-sig-from-the-failure)
     * [Finding a Flaky Test](#finding-a-flaky-test)
     * [Priority Labels](#priority-labels)
     * [Milestones](#milestones)
@@ -53,9 +55,7 @@ Triage](https://github.com/kubernetes/sig-release/tree/master/release-team/role-
 - Presenting summary reports at release team and burndown meetings
 - Maintaining the automation around tracking issues/PRs against the current milestone
 
-Since the role was created by the merger of the CI Signal sub-team and the Bug Triage sub-team, two project boards must be
-maintained. Perhaps this can be unified down the road. Detailed information on project boards is
-present [here](/release-team/role-handbooks/release-signal/project-boards.md). As a Release Signal Team member, it is not your
+Release Signal team maintains two GitHub project boards. Detailed information can be found [here](/release-team/role-handbooks/release-signal/project-boards.md). As a Release Signal Team member, it is not your
 responsibility to fix issues/create PRs; instead, you should get the assignees, owners, SIG leads, or contributors to do it.
 Check [How To Escalate](#how-to-escalate) on how to do it.
 
@@ -138,18 +138,41 @@ stabilization phase.
   the [teams.yaml](https://github.com/kubernetes/org/blob/master/config/kubernetes/sig-release/teams.yaml).
   _Coordinate with the release lead to make multiple changes to this file in one PR._
 - Plan release support and status reporting. Setup [CI-Signal project board](/release-team/role-handbooks/release-signal/project-boards.md#setting-up-the-ci-signal-project-board) and the [Bug Triage Project Board](/release-team/role-handbooks/release-signal/project-boards.md#setting-up-the-bug-triage-project-board).
-- Create an excel sheet to track various assignments during the release cycle. [Example](https://docs.google.com/spreadsheets/d/1lYbCOGvG9jD-AVT0Ajc3LoSLNKHC6xIIy1t6BJPlO7E/edit?usp=sharing)
 - Release Signal Shadows must be a member of the Kubernetes organization and, therefore, apply for membership by opening an issue
   on [kubernetes/org](https://github.com/kubernetes/org) (
   see [Issue template](https://github.com/kubernetes/org/issues/new?assignees=&labels=area%2Fgithub-membership&template=membership.yml&title=REQUEST%3A+New+membership+for+%3Cyour-GH-handle%3E)).
 - Organizing an onboarding meeting with shadows to walk through this handbook and useful tools like [Testgrid](https://github.com/GoogleCloudPlatform/testgrid),
   [Triage](https://github.com/kubernetes/test-infra/tree/master/triage), [Spyglass](https://docs.prow.k8s.io/docs/spyglass/), [Prow](https://docs.prow.k8s.io/docs/), and [Tide](https://docs.prow.k8s.io/docs/components/core/tide/).
 
+#### Create Assignment Excel Sheet
+
+Create an excel sheet to track various assignments during the release cycle. [Example](https://docs.google.com/spreadsheets/d/1lYbCOGvG9jD-AVT0Ajc3LoSLNKHC6xIIy1t6BJPlO7E/edit?usp=sharing)
+
+Roles in the assignments excel sheet:
+
+1. **Task Assignee:** Responsible for completing an assigned task, including providing team meeting updates and/or giving the Go/No-Go signal.
+2. **Main Coordinator:** Main coordinator is responsible for:
+    - Observing testgrid dashboards (along with other shadows).
+    - Creating issues for failing/flaking tests. 
+    - Following up with related SIGs/WGs to get the issue resolved.
+    - Close fixed issues after verifying the fix.
+    - _**Additionally the main coordinator has the authority to assign above mentioned tasks to other shadows explicitly.**_ <br>
+    eg:
+      - _Assigning other shadows to create issues for failures/flakes._
+      - _Assigning other shadows to observe a particular job._
+      - _Assigning other shadows to follou up on issues with related SIGs/WGs_
+      - _Assigning any other task that the main coordinator does._
+
+      <br>**_Note:_** The Release Signal Lead has the ensure that the assignments are fair and the work distribution during the cycle is even.
+
+**_Note:_** Shadows not having any of the above roles in any week are supposed to complete tasks assigned by the 'Main Coordinator' and regularly observe and report about failures/flakes on the testgrid dashboards.
+
 ### Early Release
 
 Once the onboarding meetings have been organized, the following tasks are good to begin with during the early release cycle (Week
 0 - Week 6)
 
+- Ask shadows to fill the assignments excel sheet ([example](https://docs.google.com/spreadsheets/d/1lYbCOGvG9jD-AVT0Ajc3LoSLNKHC6xIIy1t6BJPlO7E/edit?usp=sharing)). Lead assigns the remaining spots (to themselves or to the shadows)
 - Start maintaining the [CI signal project board](https://github.com/orgs/kubernetes/projects/68) and keep it up-to-date with
   issues tracking any test failure/flake
 - Assign the new milestone labels to the open issues from the previous release, assign a member of the Release Signal team, and
@@ -275,6 +298,21 @@ possibility needs to be monitored, and when it happens, the commits need to be t
 justification, tests, docs, etc.
 
 ## Release Cutting - Go or No-Go
+
+Basic idea behind giving go/no-go signal:
+
+```mermaid
+flowchart TD
+    A[Identify Failures/Flakes] -->|No Failures/Flakes| B[Go Signal]
+    A --> |Failures/Flakes Present| C[Get Blocking/Non-Blocking confirmation \n from responsible SIG/WG]
+    C --> |No Blockers| B
+    C --> |Blockers Present| D[No-Go Signal]
+    D --> |Summarize the status in \n #release-management \n and ping the release lead| E[Subject matter experts \n work on the blocker/s]
+    E --> F[Blocking issue resolved]
+    F --> B
+    style B fill:#008000
+    style D fill:#FF0000
+```
 
 Over the release cycle, the release engineering team will cut several releases (alpha, beta, rc), before it ends with a new major
 Kubernetes release. During the release cycle, tests fail and potentially prevent the cut of a new version. The release signal team
@@ -474,16 +512,21 @@ feel should be brought to the attention of the release team.
 
 ### A Tour of CI on the Kubernetes Project
 
-[A guide to CI on Kubernetes with Rob Kielty (1.20 CI Signal lead) and Dan Magnum (1.19 CI Signal lead)](https://www.youtube.com/watch?v=bttEcArAjUw):
+- [A guide to CI on Kubernetes with Rob Kielty (1.20 CI Signal lead) and Dan Magnum (1.19 CI Signal lead)](https://www.youtube.com/watch?v=bttEcArAjUw):
 Introduces the role of CI Signal members and walks through the tools and processes used for logging flaky/failing tests (as
 explained below).
+<br> Notes to follow along: http://bit.ly/k8s-ci-signal
 
-Notes to follow along: http://bit.ly/k8s-ci-signal
+- The [Release Signal Walkthroughs Playlist](https://youtube.com/playlist?list=PL69nYSiGNLP2Lzsjir9W7S8u0UsQeeW71&si=mp8zpMyheVR1eI1i) contains short videos explaining some essential aspects of Release Signal. 
 
 ### How to Escalate
 
 This role consists of creating issues for failing and flaky tests on the testgrid and monitoring issues and PRs targeted for the
 current release cycle. The path of escalation is slightly different for both types of issues.
+
+As a general rule of thumb:
+
+_**Always ping folks alongside posting to a Slack channel**_
 
 - For tests failing/flaking on testgrid:
   1. Create an issue in the [k/k](https://github.com/kubernetes/kubernetes)
@@ -516,14 +559,23 @@ non-responsive issues.
 - Quirk: If a job is listed as FAILING but doesn't have "Overall" as one of its ongoing failures, it's not actually failing. It
   might be "red" from some previous test run failures and will clear up after a few "green" runs.
 - if a job is failing in one of the meta-stages (Up, Down, DumpClusterLogs, etc.), find the owning SIG since it is a infra failure
+- You can look at the past history of the job/test (even as far back as multiple releases) by querying
+  the [triage dashboard for specific job and/or test name](https://storage.googleapis.com/k8s-triage/index.html).
+
+#### Inferring Responsible SIG from the failure
+
 - If a job is failing because a specific test case is failing, and that test case has a [sig-foo] in its name, tag SIG-foo in the
   issue and find the appropriate owner within the SIG
-- With unit test case failures, try to infer the SIG from the path or OWNERS files in it. Otherwise, find the owning SIG to help.
+- With unit test case failures, try to infer the SIG from the path or OWNERS files in it. Otherwise, find the owning SIG to help. OWNERS file is present in the same directry as a job's config file.
+
+<img alt="Prowjob Config File" src="img/prowjob-config-file.png" style="max-width: 800px; height: auto; "/>
+
 - With verify failures, try to infer the failure from the log. Otherwise, find the owning SIG to help
 - If a test case is failing in one job consistently but not others, both the job owner and test case owner are responsible for
   identifying why this combination is different.
-- You can look at the past history of the job/test (even as far back as multiple releases) by querying
-  the [triage dashboard for specific job and/or test name](https://storage.googleapis.com/k8s-triage/index.html).
+- [Triage](https://go.k8s.io/triage) also has the ability to infer the responsible SIG in some cases.
+
+<img alt="Triage inferring SIG" src="img/triage-inferring-sig.png" style="max-width: 800px; height: auto; "/>
 
 ### Finding a Flaky Test
 
