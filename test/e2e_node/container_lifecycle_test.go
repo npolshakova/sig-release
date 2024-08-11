@@ -1863,6 +1863,170 @@ var _ = SIGDescribe(nodefeature.SidecarContainers, "Containers Lifecycle", func(
 			})
 		})
 
+		ginkgo.When("an Init container with a startup probe timeout precedes a restartable init container", ginkgo.Ordered, func() {
+			init1 := "init-1"
+			restartableInit1 := "restartable-init-1"
+			regular1 := "regular-1"
+
+			podSpec := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "init-container-startup-timeout-restartable-behavior",
+				},
+				Spec: v1.PodSpec{
+					RestartPolicy: v1.RestartPolicyNever, // Pod won't restart on failure
+					InitContainers: []v1.Container{
+						{
+							Name:  init1,
+							Image: busyboxImage,
+							Command: ExecCommand(init1, execCommand{
+								Delay:    600, // Long enough for startup probe to time out
+								ExitCode: 0,
+							}),
+							StartupProbe: &v1.Probe{
+								TimeoutSeconds:   1, // Short timeout to ensure failure
+								FailureThreshold: 1,
+								ProbeHandler: v1.ProbeHandler{
+									Exec: &v1.ExecAction{
+										Command: []string{"false"}, // Always fails
+									},
+								},
+							},
+						},
+						{
+							Name:          restartableInit1,
+							Image:         busyboxImage,
+							RestartPolicy: &containerRestartPolicyAlways,
+							Command: ExecCommand(restartableInit1, execCommand{
+								Delay:    600,
+								ExitCode: 0,
+							}),
+						},
+					},
+					Containers: []v1.Container{
+						{
+							Name:  regular1,
+							Image: busyboxImage,
+							Command: ExecCommand(regular1, execCommand{
+								Delay:    1,
+								ExitCode: 0,
+							}),
+						},
+					},
+				},
+			}
+
+			preparePod(podSpec)
+			var results containerOutputList
+
+			ginkgo.It("should keep the Pod in Pending state and produce log", func(ctx context.Context) {
+				client := e2epod.NewPodClient(f)
+				podSpec = client.Create(ctx, podSpec)
+
+				err := e2epod.WaitForPodCondition(ctx, f.ClientSet, podSpec.Namespace, podSpec.Name, "pending due to init container startup failure", 5*time.Minute, func(pod *v1.Pod) (bool, error) {
+					if pod.Status.Phase != v1.PodPending {
+						return false, fmt.Errorf("pod should be in pending phase")
+					}
+					if len(pod.Status.InitContainerStatuses) < 1 {
+						return false, nil
+					}
+					containerStatus := pod.Status.InitContainerStatuses[0]
+					return containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason == "StartupProbeFailed", nil
+				})
+				framework.ExpectNoError(err)
+
+				podSpec, err := client.Get(ctx, podSpec.Name, metav1.GetOptions{})
+				framework.ExpectNoError(err)
+				results = parseOutput(ctx, f, podSpec)
+			})
+
+			ginkgo.It("should terminate the init container after startup probe timeout", func() {
+				framework.ExpectNoError(results.Exits(init1))
+			})
+
+			ginkgo.It("should not start the restartable init container", func() {
+				framework.ExpectNoError(results.DoesntStart(restartableInit1))
+			})
+
+			ginkgo.It("should not start the regular container", func() {
+				framework.ExpectNoError(results.DoesntStart(regular1))
+			})
+		})
+
+		ginkgo.When("an Init container before restartable init container continuously fails", ginkgo.Ordered, func() {
+
+			init1 := "init-1"
+			restartableInit1 := "restartable-init-1"
+			regular1 := "regular-1"
+
+			podSpec := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "init-container-fails-before-restartable-init-starts",
+				},
+				Spec: v1.PodSpec{
+					RestartPolicy: v1.RestartPolicyOnFailure,
+					InitContainers: []v1.Container{
+						{
+							Name:  init1,
+							Image: busyboxImage,
+							Command: ExecCommand(init1, execCommand{
+								Delay:    1,
+								ExitCode: 1,
+							}),
+						},
+						{
+							Name:  restartableInit1,
+							Image: busyboxImage,
+							Command: ExecCommand(restartableInit1, execCommand{
+								Delay:    600,
+								ExitCode: 0,
+							}),
+							RestartPolicy: &containerRestartPolicyAlways,
+						},
+					},
+					Containers: []v1.Container{
+						{
+							Name:  regular1,
+							Image: busyboxImage,
+							Command: ExecCommand(regular1, execCommand{
+								Delay:    600,
+								ExitCode: 0,
+							}),
+						},
+					},
+				},
+			}
+
+			preparePod(podSpec)
+			var results containerOutputList
+
+			ginkgo.It("should continuously run Pod keeping it Pending", func() {
+				client := e2epod.NewPodClient(f)
+				podSpec = client.Create(context.TODO(), podSpec)
+
+				err := e2epod.WaitForPodCondition(context.TODO(), f.ClientSet, podSpec.Namespace, podSpec.Name, "pending and restarting 3 times", 5*time.Minute, func(pod *v1.Pod) (bool, error) {
+					if pod.Status.Phase != v1.PodPending {
+						return false, fmt.Errorf("pod should be in pending phase")
+					}
+					if len(pod.Status.InitContainerStatuses) < 1 {
+						return false, nil
+					}
+					containerStatus := pod.Status.InitContainerStatuses[0]
+					return containerStatus.RestartCount >= 3, nil
+				})
+				framework.ExpectNoError(err)
+
+				podSpec, err := client.Get(context.TODO(), podSpec.Name, metav1.GetOptions{})
+				framework.ExpectNoError(err)
+				results = parseOutput(context.TODO(), f, podSpec)
+			})
+			ginkgo.It("should have Init container restartCount greater than 0", func() {
+				framework.ExpectNoError(results.HasRestarted(init1))
+			})
+			ginkgo.It("should not start restartable init container", func() {
+				framework.ExpectNoError(results.DoesntStart(restartableInit1))
+			})
+		})
+
 		ginkgo.When("an Init container after restartable init container fails", ginkgo.Ordered, func() {
 
 			init1 := "init-1"
